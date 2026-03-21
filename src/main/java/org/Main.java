@@ -73,6 +73,13 @@ class Page {
         return ((buffer[offset] & 0xFF) << 24) | ((buffer[offset + 1] & 0xFF) << 16) | ((buffer[offset + 2] & 0xFF) << 8) | ((buffer[offset + 3] & 0xFF));
     }
 
+    public byte[] readBytes(int offset, int length) {
+        byte[] result = new byte[length];
+        System.arraycopy(this.buffer, offset, result, 0, length);
+
+        return result;
+    }
+
     private void writeInt(int offset, int value) {
         // java.nio.ByteBuffer.putInt(offset, value)
         buffer[offset] = (byte) (value >> 24);
@@ -116,8 +123,28 @@ class BTree {
     }
 
     // Stub methods for disk I/O
-    private Record readRowFromDisk(int location) {
-        return new Record();
+    private Record readRowFromDisk(int pageId, int searchKey) throws Exception {
+        Page page = diskManager.readPage(pageId);
+        int numRecords = page.numKeys();
+
+        for (int i = 0; i < numRecords; i++) {
+            int currentOffset = (i * 50) + 5;
+
+            // 1. Read the ID at this offset
+            int currentId = page.readInt(currentOffset);
+
+            // 2. Check if it matches our searchKey
+            if (currentId == searchKey) {
+                byte[] payload = page.readBytes(currentOffset, 46);
+
+                Record foundRecord = new Record();
+                foundRecord.id = currentId;
+                foundRecord.payload = payload;
+                return foundRecord;
+            }
+        }
+
+        return null; // Record not found on this page
     }
 
     private Node readNodeFromDisk(int pageId) throws Exception {
