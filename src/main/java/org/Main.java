@@ -2,16 +2,15 @@ package org;
 
 import java.io.IO;
 import java.io.RandomAccessFile;
+import java.nio.charset.StandardCharsets;
 
 import static org.Page.PAGE_SIZE;
 
 public class Main {
-    static void main() {
+    static void main() throws Exception {
         IO.println(String.format("Hello and welcome!"));
 
-        for (int i = 1; i <= 5; i++) {
-            IO.println("i = " + i);
-        }
+
     }
 }
 
@@ -19,6 +18,31 @@ public class Main {
 class Record {
     int id;          // 4 bytes (The search key)
     byte[] payload;  // 46 bytes (The actual row data)
+
+    public Record(int id, String text) {
+        this.id = id;
+
+        this.payload = new byte[46];
+
+        if (text != null) {
+            byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+            int lengthToCopy = Math.min(textBytes.length, this.payload.length);
+            System.arraycopy(textBytes, 0, this.payload, 0, lengthToCopy);
+        }
+    }
+
+    public String getText() {
+        if (this.payload == null) {
+            return null;
+        }
+
+        int length = 0;
+        while (length < this.payload.length && this.payload[length] != 0) {
+            length++;
+        }
+
+        return new String(this.payload, 0, length, StandardCharsets.UTF_8);
+    }
 }
 
 // 🌳 Represents the routing structure in RAM
@@ -114,7 +138,7 @@ class BTree {
 
         if (currentNode.isLeaf) {
             int dataLocation = currentNode.pointers[i];
-            return readRowFromDisk(dataLocation);
+            return readRowFromDisk(dataLocation, target);
         } else {
             int childPageId = currentNode.pointers[i];
             Node childNode = readNodeFromDisk(childPageId);
