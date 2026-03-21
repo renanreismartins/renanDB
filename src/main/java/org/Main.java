@@ -11,6 +11,16 @@ public class Main {
         IO.println(String.format("Hello and welcome!"));
 
 
+        DiskManager diskManager = new DiskManager("db.db");
+        int pageId = diskManager.allocatePage();
+        Page page = new Page();
+        diskManager.writePage(pageId, page);
+        page.insertRecord(new Record(1, "renan"));
+
+
+        BTree tree = new BTree(diskManager);
+        Record record = tree.search(1);
+        IO.println(record.getText());
     }
 }
 
@@ -29,6 +39,11 @@ class Record {
             int lengthToCopy = Math.min(textBytes.length, this.payload.length);
             System.arraycopy(textBytes, 0, this.payload, 0, lengthToCopy);
         }
+    }
+
+    public Record(int id, byte[] payload) {
+        this.id = id;
+        this.payload = payload;
     }
 
     public String getText() {
@@ -130,7 +145,12 @@ class BTree {
         this.diskManager = diskManager;
     }
 
-    public Record search(Node currentNode, int target) throws Exception {
+    public Record search(int target) throws Exception {
+        Node rootNode = readNodeFromDisk(1);
+        return search(rootNode, target);
+    }
+
+    private Record search(Node currentNode, int target) throws Exception {
         int i = 0;
         while (i < currentNode.numKeys && currentNode.keys[i] <= target) {
             i++;
@@ -161,10 +181,7 @@ class BTree {
             if (currentId == searchKey) {
                 byte[] payload = page.readBytes(currentOffset, 46);
 
-                Record foundRecord = new Record();
-                foundRecord.id = currentId;
-                foundRecord.payload = payload;
-                return foundRecord;
+                return new Record(currentId, payload);
             }
         }
 
