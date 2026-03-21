@@ -12,15 +12,9 @@ public class Main {
 
 
         DiskManager diskManager = new DiskManager("db.db");
-        int pageId = diskManager.allocatePage();
-        Page page = new Page();
-        diskManager.writePage(pageId, page);
-        page.insertRecord(new Record(1, "renan"));
-
-
         BTree tree = new BTree(diskManager);
-        Record record = tree.search(1);
-        IO.println(record.getText());
+        tree.insert(new Record(1, "renan"));
+        IO.println(tree.search(1));
     }
 }
 
@@ -138,15 +132,31 @@ class Page {
 
 // 🔍 The algorithm to navigate the tree
 class BTree {
-
     DiskManager diskManager;
+    int rootPageId = -1;
 
     public BTree(DiskManager diskManager) {
         this.diskManager = diskManager;
     }
 
+    public void insert(Record record) throws Exception {
+        if (rootPageId == -1) {
+            int pageId = diskManager.allocatePage();
+            this.rootPageId = pageId;
+            Page page = diskManager.readPage(pageId);
+            page.insertRecord(record);
+            diskManager.writePage(pageId, page);
+        } else {
+            //TODO If rootPageId is no longer -1, it means our tree already exists on the disk.
+            // Before we can figure out where this new record belongs,
+            // what is the very first method call we need to make to bring our existing tree into memory?
+
+        }
+
+    }
+
     public Record search(int target) throws Exception {
-        Node rootNode = readNodeFromDisk(1);
+        Node rootNode = readNodeFromDisk(this.rootPageId);
         return search(rootNode, target);
     }
 
