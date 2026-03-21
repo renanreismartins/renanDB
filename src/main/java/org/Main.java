@@ -69,7 +69,7 @@ class Page {
     }
 
     // Helper methods for raw byte manipulation
-    private int readInt(int offset) {
+    public int readInt(int offset) {
         return ((buffer[offset] & 0xFF) << 24) | ((buffer[offset + 1] & 0xFF) << 16) | ((buffer[offset + 2] & 0xFF) << 8) | ((buffer[offset + 3] & 0xFF));
     }
 
@@ -84,6 +84,10 @@ class Page {
     private void writeBytes(int offset, byte[] data) {
         System.arraycopy(data, 0, this.buffer, offset, data.length);
     }
+
+    public int numKeys() {
+        return readInt(1);
+    }
 }
 
 // 🔍 The algorithm to navigate the tree
@@ -95,7 +99,7 @@ class BTree {
         this.diskManager = diskManager;
     }
 
-    public Record search(Node currentNode, int target) {
+    public Record search(Node currentNode, int target) throws Exception {
         int i = 0;
         while (i < currentNode.numKeys && currentNode.keys[i] <= target) {
             i++;
@@ -116,8 +120,27 @@ class BTree {
         return new Record();
     }
 
-    private Node readNodeFromDisk(int pageId) {
-        return new Node();
+    private Node readNodeFromDisk(int pageId) throws Exception {
+        Page page = diskManager.readPage(pageId);
+        Node node = new Node();
+        node.isLeaf = page.buffer[0] == 1;
+        node.numKeys = page.numKeys();
+
+        node.keys = new int[500];
+        node.pointers = new int[501];
+
+        for (int i = 0; i < node.numKeys; i++) {
+            int keyOffset = (i * 4) + 5;
+            //TODO method on the page tha returns this array, moving the for loop to the page
+            node.keys[i] = page.readInt(keyOffset);
+        }
+
+        for (int i = 0; i <= node.numKeys; i++) {
+            int pointerOffset = (i * 4) + 2005;
+            node.pointers[i] = page.readInt(pointerOffset);
+        }
+
+        return node;
     }
 }
 
