@@ -155,18 +155,13 @@ class Page {
         node.isLeaf = buffer[0] == 1;
         node.numKeys = numKeys();
 
-        node.keys = new int[MAX_KEYS];
-        node.pointers = new int[MAX_KEYS + 1];
+        node.keys = IntStream.range(0, node.numKeys)
+                .map(i -> readInt((i * KEY_SIZE) + HEADER_SIZE))
+                .toArray();
 
-        for (int i = 0; i < node.numKeys; i++) {
-            int keyOffset = (i * KEY_SIZE) + HEADER_SIZE;
-            node.keys[i] = readInt(keyOffset);
-        }
-
-        for (int i = 0; i <= node.numKeys; i++) {
-            int pointerOffset = (i * KEY_SIZE) + POINTERS_OFFSET;
-            node.pointers[i] = readInt(pointerOffset);
-        }
+        node.pointers = IntStream.rangeClosed(0, node.numKeys)
+                .map(i -> readInt((i * KEY_SIZE) + POINTERS_OFFSET))
+                .toArray();
 
         return node;
     }
