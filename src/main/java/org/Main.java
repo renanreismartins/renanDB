@@ -213,13 +213,13 @@ class BTree {
         node.pointers = new int[501];
 
         for (int i = 0; i < node.numKeys; i++) {
-            int keyOffset = (i * 4) + 5;
+            int keyOffset = (i * Page.KEY_SIZE) + 5;
             //TODO method on the page tha returns this array, moving the for loop to the page
             node.keys[i] = page.readInt(keyOffset);
         }
 
         for (int i = 0; i <= node.numKeys; i++) {
-            int pointerOffset = (i * 4) + 2005;
+            int pointerOffset = (i * Page.KEY_SIZE) + 2005;
             node.pointers[i] = page.readInt(pointerOffset);
         }
 
