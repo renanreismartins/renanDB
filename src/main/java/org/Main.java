@@ -72,6 +72,8 @@ class Page {
     static final int RECORD_SIZE = 50;
     static final int KEY_SIZE = 4;
     static final int PAYLOAD_SIZE = RECORD_SIZE - KEY_SIZE;
+    static final int MAX_KEYS = 500;
+    static final int POINTERS_OFFSET = (MAX_KEYS * KEY_SIZE) + HEADER_SIZE;
 
     byte[] buffer = new byte[PAGE_SIZE];
 
@@ -209,17 +211,17 @@ class BTree {
         node.isLeaf = page.buffer[0] == 1;
         node.numKeys = page.numKeys();
 
-        node.keys = new int[500];
-        node.pointers = new int[501];
+        node.keys = new int[Page.MAX_KEYS];
+        node.pointers = new int[Page.MAX_KEYS + 1];
 
         for (int i = 0; i < node.numKeys; i++) {
-            int keyOffset = (i * Page.KEY_SIZE) + 5;
+            int keyOffset = (i * Page.KEY_SIZE) + Page.HEADER_SIZE;
             //TODO method on the page tha returns this array, moving the for loop to the page
             node.keys[i] = page.readInt(keyOffset);
         }
 
         for (int i = 0; i <= node.numKeys; i++) {
-            int pointerOffset = (i * Page.KEY_SIZE) + 2005;
+            int pointerOffset = (i * Page.KEY_SIZE) + Page.POINTERS_OFFSET;
             node.pointers[i] = page.readInt(pointerOffset);
         }
 
