@@ -191,23 +191,16 @@ class BTree {
         }
     }
 
-    // Stub methods for disk I/O
     private Record readRowFromDisk(int pageId, int searchKey) throws Exception {
         Page page = diskManager.readPage(pageId);
         int numRecords = page.numKeys();
 
-        for (int i = 0; i < numRecords; i++) {
-            int currentOffset = (i * Page.RECORD_SIZE) + Page.HEADER_SIZE;
-            int currentId = page.readInt(currentOffset);
-
-            if (currentId == searchKey) {
-                byte[] payload = page.readPayload(currentOffset);
-
-                return new Record(currentId, payload);
-            }
-        }
-
-        return null;
+        return IntStream.range(0, numRecords)
+                .mapToObj(i -> (i * Page.RECORD_SIZE) + Page.HEADER_SIZE)
+                .filter(offset -> page.readInt(offset) == searchKey)
+                .findFirst()
+                .map(offset -> new Record(page.readInt(offset), page.readPayload(offset)))
+                .orElse(null);
     }
 
     private Node readNodeFromDisk(int pageId) throws Exception {
