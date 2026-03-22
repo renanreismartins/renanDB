@@ -115,8 +115,8 @@ class Page {
         | ((buffer[offset + 3] & 0xFF));
     }
 
-    public byte[] readPayload(int offset) {
-        return readBytes(offset, PAYLOAD_SIZE);
+    public Record readRecord(int offset) {
+        return new Record(readInt(offset), readBytes(offset + KEY_SIZE, PAYLOAD_SIZE));
     }
 
     private byte[] readBytes(int offset, int length) {
@@ -201,7 +201,7 @@ class BTree {
                 .mapToObj(i -> (i * Page.RECORD_SIZE) + Page.HEADER_SIZE)
                 .filter(offset -> page.readInt(offset) == searchKey)
                 .findFirst()
-                .map(offset -> new Record(page.readInt(offset), page.readPayload(offset + Page.KEY_SIZE)))
+                .map(page::readRecord)
                 .orElse(null);
     }
 
