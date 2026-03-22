@@ -19,44 +19,39 @@ public class Main {
 }
 
 // 📝 Represents a single row in our database (50 bytes total)
-class Record {
-    int id;          // 4 bytes (The search key)
-    byte[] payload;  // 46 bytes (The actual row data)
+record Record(int id, byte[] payload) {
 
     public Record(int id, String text) {
-        this.id = id;
-
-        this.payload = new byte[46];
-
-        if (text != null) {
-            byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
-            int lengthToCopy = Math.min(textBytes.length, this.payload.length);
-            System.arraycopy(textBytes, 0, this.payload, 0, lengthToCopy);
-        }
+        this(id, toPayload(text));
     }
 
-    public Record(int id, byte[] payload) {
-        this.id = id;
-        this.payload = payload;
+    private static byte[] toPayload(String text) {
+        byte[] payload = new byte[46];
+        if (text != null) {
+            byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+            int lengthToCopy = Math.min(textBytes.length, payload.length);
+            System.arraycopy(textBytes, 0, payload, 0, lengthToCopy);
+        }
+        return payload;
     }
 
     public String getText() {
-        if (this.payload == null) {
+        if (this.payload() == null) {
             return null;
         }
 
         int length = 0;
-        while (length < this.payload.length && this.payload[length] != 0) {
+        while (length < this.payload().length && this.payload()[length] != 0) {
             length++;
         }
 
-        return new String(this.payload, 0, length, StandardCharsets.UTF_8);
+        return new String(this.payload(), 0, length, StandardCharsets.UTF_8);
     }
 
     @Override
     public String toString() {
         return "Record{" +
-                "id=" + id +
+                "id=" + id() +
                 ", payload=" + getText() +
                 '}';
     }
@@ -86,7 +81,7 @@ class Page {
         while (insertIndex < numKeys) {
             int currentOffset = (RECORD_SIZE * insertIndex) + HEADER_SIZE;
             int currentId = readInt(currentOffset);
-            if (newRecord.id < currentId) {
+            if (newRecord.id() < currentId) {
                 break;
             }
             insertIndex++;
@@ -102,8 +97,8 @@ class Page {
         }
 
         // 3. Write the new record into the freed space
-        writeInt(targetOffset, newRecord.id);
-        writeBytes(targetOffset + 4, newRecord.payload); // 4 = key size that was written above
+        writeInt(targetOffset, newRecord.id());
+        writeBytes(targetOffset + 4, newRecord.payload()); // 4 = key size that was written above
 
         // 4. Update the header
         writeInt(1, numKeys + 1);
