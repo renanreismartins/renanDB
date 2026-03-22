@@ -3,13 +3,13 @@ package org;
 import java.io.IO;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.IntStream;
 
 import static org.Page.PAGE_SIZE;
 
 public class Main {
     static void main() throws Exception {
         IO.println(String.format("Hello and welcome!"));
-
 
         DiskManager diskManager = new DiskManager("db.db");
         BTree tree = new BTree(diskManager);
@@ -70,6 +70,8 @@ class Page {
     static final int PAGE_SIZE = 8192;
     static final int HEADER_SIZE = 5;
     static final int RECORD_SIZE = 50;
+    static final int KEY_SIZE = 4;
+    static final int PAYLOAD_SIZE = RECORD_SIZE - KEY_SIZE;
 
     byte[] buffer = new byte[PAGE_SIZE];
 
@@ -98,18 +100,24 @@ class Page {
 
         // 3. Write the new record into the freed space
         writeInt(targetOffset, newRecord.id());
-        writeBytes(targetOffset + 4, newRecord.payload()); // 4 = key size that was written above
+        writeBytes(targetOffset + KEY_SIZE, newRecord.payload());
 
         // 4. Update the header
         writeInt(1, numKeys + 1);
     }
 
-    // Helper methods for raw byte manipulation
     public int readInt(int offset) {
-        return ((buffer[offset] & 0xFF) << 24) | ((buffer[offset + 1] & 0xFF) << 16) | ((buffer[offset + 2] & 0xFF) << 8) | ((buffer[offset + 3] & 0xFF));
+        return ((buffer[offset] & 0xFF) << 24)
+        | ((buffer[offset + 1] & 0xFF) << 16)
+        | ((buffer[offset + 2] & 0xFF) << 8)
+        | ((buffer[offset + 3] & 0xFF));
     }
 
-    public byte[] readBytes(int offset, int length) {
+    public byte[] readPayload(int offset) {
+        return readBytes(offset, PAYLOAD_SIZE);
+    }
+
+    private byte[] readBytes(int offset, int length) {
         byte[] result = new byte[length];
         System.arraycopy(this.buffer, offset, result, 0, length);
 
@@ -169,10 +177,9 @@ class BTree {
     }
 
     private Record search(Node currentNode, int target) throws Exception {
-        int i = 0;
-        while (i < currentNode.numKeys && currentNode.keys[i] <= target) {
-            i++;
-        }
+        int i = (int) IntStream.range(0, currentNode.numKeys)
+                .filter(idx -> currentNode.keys[idx] <= target)
+                .count();
 
         if (currentNode.isLeaf) {
             int dataLocation = currentNode.pointers[i];
@@ -190,20 +197,17 @@ class BTree {
         int numRecords = page.numKeys();
 
         for (int i = 0; i < numRecords; i++) {
-            int currentOffset = (i * 50) + 5;
-
-            // 1. Read the ID at this offset
+            int currentOffset = (i * Page.RECORD_SIZE) + Page.HEADER_SIZE;
             int currentId = page.readInt(currentOffset);
 
-            // 2. Check if it matches our searchKey
             if (currentId == searchKey) {
-                byte[] payload = page.readBytes(currentOffset, 46);
+                byte[] payload = page.readPayload(currentOffset);
 
                 return new Record(currentId, payload);
             }
         }
 
-        return null; // Record not found on this page
+        return null;
     }
 
     private Node readNodeFromDisk(int pageId) throws Exception {
