@@ -52,6 +52,14 @@ class Record {
 
         return new String(this.payload, 0, length, StandardCharsets.UTF_8);
     }
+
+    @Override
+    public String toString() {
+        return "Record{" +
+                "id=" + id +
+                ", payload=" + getText() +
+                '}';
+    }
 }
 
 // 🌳 Represents the routing structure in RAM
@@ -121,6 +129,10 @@ class Page {
         buffer[offset + 3] = (byte) (value);
     }
 
+    public void setLeaf(boolean leaf) {
+        buffer[0] = leaf ? (byte) 1 : (byte) 0;
+    }
+
     private void writeBytes(int offset, byte[] data) {
         System.arraycopy(data, 0, this.buffer, offset, data.length);
     }
@@ -144,6 +156,7 @@ class BTree {
             int pageId = diskManager.allocatePage();
             this.rootPageId = pageId;
             Page page = diskManager.readPage(pageId);
+            page.setLeaf(true);
             page.insertRecord(record);
             diskManager.writePage(pageId, page);
         } else {
