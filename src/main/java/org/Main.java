@@ -108,7 +108,7 @@ class Page {
         writeInt(1, numKeys + 1);
     }
 
-    public int readInt(int offset) {
+    private int readInt(int offset) {
         return ((buffer[offset] & 0xFF) << 24)
         | ((buffer[offset + 1] & 0xFF) << 16)
         | ((buffer[offset + 2] & 0xFF) << 8)
@@ -117,6 +117,10 @@ class Page {
 
     public Record readRecord(int offset) {
         return new Record(readInt(offset), readBytes(offset + KEY_SIZE, PAYLOAD_SIZE));
+    }
+
+    public boolean matchesKey(int offset, int key) {
+        return readInt(offset) == key;
     }
 
     private byte[] readBytes(int offset, int length) {
@@ -144,6 +148,27 @@ class Page {
 
     public int numKeys() {
         return readInt(1);
+    }
+
+    public Node toNode() {
+        Node node = new Node();
+        node.isLeaf = buffer[0] == 1;
+        node.numKeys = numKeys();
+
+        node.keys = new int[MAX_KEYS];
+        node.pointers = new int[MAX_KEYS + 1];
+
+        for (int i = 0; i < node.numKeys; i++) {
+            int keyOffset = (i * KEY_SIZE) + HEADER_SIZE;
+            node.keys[i] = readInt(keyOffset);
+        }
+
+        for (int i = 0; i <= node.numKeys; i++) {
+            int pointerOffset = (i * KEY_SIZE) + POINTERS_OFFSET;
+            node.pointers[i] = readInt(pointerOffset);
+        }
+
+        return node;
     }
 }
 
@@ -199,7 +224,7 @@ class BTree {
 
         return IntStream.range(0, numRecords)
                 .mapToObj(i -> (i * Page.RECORD_SIZE) + Page.HEADER_SIZE)
-                .filter(offset -> page.readInt(offset) == searchKey)
+                .filter(offset -> page.matchesKey(offset, searchKey))
                 .findFirst()
                 .map(page::readRecord)
                 .orElse(null);
@@ -207,25 +232,7 @@ class BTree {
 
     private Node readNodeFromDisk(int pageId) throws Exception {
         Page page = diskManager.readPage(pageId);
-        Node node = new Node();
-        node.isLeaf = page.buffer[0] == 1;
-        node.numKeys = page.numKeys();
-
-        node.keys = new int[Page.MAX_KEYS];
-        node.pointers = new int[Page.MAX_KEYS + 1];
-
-        for (int i = 0; i < node.numKeys; i++) {
-            int keyOffset = (i * Page.KEY_SIZE) + Page.HEADER_SIZE;
-            //TODO method on the page tha returns this array, moving the for loop to the page
-            node.keys[i] = page.readInt(keyOffset);
-        }
-
-        for (int i = 0; i <= node.numKeys; i++) {
-            int pointerOffset = (i * Page.KEY_SIZE) + Page.POINTERS_OFFSET;
-            node.pointers[i] = page.readInt(pointerOffset);
-        }
-
-        return node;
+        return page.toNode();
     }
 }
 
