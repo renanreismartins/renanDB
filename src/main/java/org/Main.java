@@ -63,6 +63,13 @@ class Node {
     boolean isLeaf;
     int[] keys;      // Max 500 keys (2000 bytes)
     int[] pointers;  // Max 501 Page IDs (4008 bytes)
+
+    Node(int numKeys, boolean isLeaf, int[] keys, int[] pointers) {
+        this.numKeys = numKeys;
+        this.isLeaf = isLeaf;
+        this.keys = keys;
+        this.pointers = pointers;
+    }
 }
 
 // 💾 Represents the raw 8KB block as it exists on the hard drive
@@ -151,19 +158,17 @@ class Page {
     }
 
     public Node toNode() {
-        Node node = new Node();
-        node.isLeaf = buffer[0] == 1;
-        node.numKeys = numKeys();
-
-        node.keys = IntStream.range(0, node.numKeys)
-                .map(i -> readInt((i * KEY_SIZE) + HEADER_SIZE))
-                .toArray();
-
-        node.pointers = IntStream.rangeClosed(0, node.numKeys)
-                .map(i -> readInt((i * KEY_SIZE) + POINTERS_OFFSET))
-                .toArray();
-
-        return node;
+        int numKeys = numKeys();
+        return new Node(
+                numKeys,
+                buffer[0] == 1,
+                IntStream.range(0, numKeys)
+                        .map(i -> readInt((i * KEY_SIZE) + HEADER_SIZE))
+                        .toArray(),
+                IntStream.rangeClosed(0, numKeys)
+                        .map(i -> readInt((i * KEY_SIZE) + POINTERS_OFFSET))
+                        .toArray()
+        );
     }
 }
 
