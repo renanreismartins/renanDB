@@ -108,6 +108,7 @@ class Page {
 
         // 3. Write the new record into the freed space
         writeInt(targetOffset, newRecord.id());
+        // TODO KEY_SIZE should not be derived from newRecord.id()?
         writeBytes(targetOffset + KEY_SIZE, newRecord.payload());
 
         // 4. Update the header
@@ -219,9 +220,8 @@ class BTree {
 
     private Record readRowFromDisk(int pageId, int searchKey) throws Exception {
         Page page = diskManager.readPage(pageId);
-        int numRecords = page.numKeys();
 
-        return IntStream.range(0, numRecords)
+        return IntStream.range(0, page.numKeys())
                 .mapToObj(i -> (i * Page.RECORD_SIZE) + Page.HEADER_SIZE)
                 .filter(offset -> page.matchesKey(offset, searchKey))
                 .findFirst()
